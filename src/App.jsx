@@ -12,15 +12,13 @@ const App = () => {
 
   return (
     <>
-      <div className="flex h-[100dvh]">
-        <DatePicker
-          fadingNumber="all"
-          circularNumber={false}
-          lang={lang}
-          selectedDate={date}
-          onDateChange={handleDateChange}
-        />
-      </div>
+      <DatePicker
+        fadingNumber="all"
+        circularNumber={false}
+        lang={lang}
+        selectedDate={date}
+        onDateChange={handleDateChange}
+      />
     </>
   );
 };

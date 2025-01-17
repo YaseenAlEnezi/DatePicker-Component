@@ -248,7 +248,7 @@ const DatePicker = ({
                   "year"
                 )}
               </div>
-              {/* <div
+              <div
                 ref={monthRef}
                 className="w-24 text-center cursor-pointer select-none z-[3]"
                 onWheel={(e) => handleInfiniteScroll(e, "month")}
@@ -265,7 +265,7 @@ const DatePicker = ({
                 onTouchStart={(e) => handleInfiniteDrag(e, "day")}
               >
                 {renderCenteredItems(days, selectedDay - 1, "day")}
-              </div> */}
+              </div>
             </div>
           </div>
           <div className="w-full mt-4 flex justify-center">
