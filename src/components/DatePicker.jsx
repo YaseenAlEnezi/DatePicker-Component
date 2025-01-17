@@ -1,32 +1,90 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import dayjs from "dayjs";
 
 const DatePicker = ({
   fadingNumber = "none",
-  circularNumber = "none",
+  circularNumber = false,
+  lang = "ar",
+  selectedDate,
+  onDateChange,
+  className,
   ...props
 }) => {
-  const [selectedYear, setSelectedYear] = useState(1990); // Default selected year
-  const [selectedMonth, setSelectedMonth] = useState(1); // Default selected month
-  const [selectedDay, setSelectedDay] = useState(1); // Default selected day
+  const [selectedYear, setSelectedYear] = useState(selectedDate.year());
+  const [selectedMonth, setSelectedMonth] = useState(selectedDate.month());
+  const [selectedDay, setSelectedDay] = useState(selectedDate.date());
 
-  const months = [
-    "كانون الثاني",
-    "شباط",
-    "آذار",
-    "نيسان",
-    "أيار",
-    "حزيران",
-    "تموز",
-    "آب",
-    "أيلول",
-    "تشرين الأول",
-    "تشرين الثاني",
-    "كانون الأول",
-  ];
-  const days = Array.from({ length: 31 }, (_, i) => i + 1); // 1 to 31
+  const yearRef = useRef(null);
+  const monthRef = useRef(null);
+  const dayRef = useRef(null);
+
+  let months;
+  if (lang === "en") {
+    months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+  } else if (lang === "ar") {
+    months = [
+      "كانون الثاني",
+      "شباط",
+      "آذار",
+      "نيسان",
+      "أيار",
+      "حزيران",
+      "تموز",
+      "آب",
+      "أيلول",
+      "تشرين الأول",
+      "تشرين الثاني",
+      "كانون الأول",
+    ];
+  }
+
+  // Get the number of days in the selected month and year
+  const getDaysInMonth = (year, month) => {
+    return dayjs(`${year}-${month + 1}-01`).daysInMonth();
+  };
+
+  const [days, setDays] = useState(
+    Array.from(
+      { length: getDaysInMonth(selectedYear, selectedMonth) },
+      (_, i) => i + 1
+    )
+  );
+
+  // Update the days array when the month or year changes
+  useEffect(() => {
+    const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
+    setDays(Array.from({ length: daysInMonth }, (_, i) => i + 1));
+
+    // Ensure the selected day is within the new number of days
+    if (selectedDay > daysInMonth) {
+      setSelectedDay(daysInMonth);
+    }
+  }, [selectedYear, selectedMonth]);
 
   // Years range from 1900 to 2025
   const years = Array.from({ length: 126 }, (_, i) => 1900 + i); // 1900 to 2025
+
+  // Update the selected date when year, month, or day changes
+  useEffect(() => {
+    const newDate = dayjs()
+      .year(selectedYear)
+      .month(selectedMonth)
+      .date(selectedDay);
+    onDateChange(newDate); // Notify the parent component of the new date
+  }, [selectedYear, selectedMonth, selectedDay, onDateChange]);
 
   const handleInfiniteScroll = (event, type) => {
     event.preventDefault();
@@ -41,21 +99,32 @@ const DatePicker = ({
         return newYear;
       });
     } else if (type === "month") {
-      setSelectedMonth(
-        (prev) => (prev + direction + months.length) % months.length
-      );
+      setSelectedMonth((prev) => {
+        let newMonth = prev + direction;
+        // Wrap around if newMonth goes below 0 or above 11
+        if (newMonth < 0) newMonth = 11;
+        if (newMonth > 11) newMonth = 0;
+        return newMonth;
+      });
     } else if (type === "day") {
-      setSelectedDay(
-        (prev) => ((prev - 1 + direction + days.length) % days.length) + 1
-      );
+      setSelectedDay((prev) => {
+        let newDay = prev + direction;
+        const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
+        // Wrap around if newDay goes below 1 or above the number of days in the month
+        if (newDay < 1) newDay = daysInMonth;
+        if (newDay > daysInMonth) newDay = 1;
+        return newDay;
+      });
     }
   };
 
   const handleInfiniteDrag = (event, type) => {
-    let startY = event.clientY;
+    let startY = event.clientY || event.touches[0].clientY;
     const moveHandler = (moveEvent) => {
-      const sensitivity = 60; // Increase this value to make dragging slower
-      const diff = Math.floor((startY - moveEvent.clientY) / sensitivity); // Slower dragging
+      const sensitivity = 1500; // Increase this value to make dragging slower
+      const currentY = moveEvent.clientY || moveEvent.touches[0].clientY;
+      const diff = Math.floor((startY - currentY) / sensitivity); // Slower dragging
+
       if (type === "year") {
         setSelectedYear((prev) => {
           let newYear = prev + diff;
@@ -65,21 +134,34 @@ const DatePicker = ({
           return newYear;
         });
       } else if (type === "month") {
-        setSelectedMonth(
-          (prev) => (prev + diff + months.length) % months.length
-        );
+        setSelectedMonth((prev) => {
+          let newMonth = prev + diff;
+          // Wrap around if newMonth goes below 0 or above 11
+          if (newMonth < 0) newMonth = 11;
+          if (newMonth > 11) newMonth = 0;
+          return newMonth;
+        });
       } else if (type === "day") {
-        setSelectedDay(
-          (prev) => ((prev - 1 + diff + days.length) % days.length) + 1
-        );
+        setSelectedDay((prev) => {
+          let newDay = prev + diff;
+          const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
+          // Wrap around if newDay goes below 1 or above the number of days in the month
+          if (newDay < 1) newDay = daysInMonth;
+          if (newDay > daysInMonth) newDay = 1;
+          return newDay;
+        });
       }
     };
     const stopHandler = () => {
       window.removeEventListener("mousemove", moveHandler);
+      window.removeEventListener("touchmove", moveHandler);
       window.removeEventListener("mouseup", stopHandler);
+      window.removeEventListener("touchend", stopHandler);
     };
     window.addEventListener("mousemove", moveHandler);
+    window.addEventListener("touchmove", moveHandler);
     window.addEventListener("mouseup", stopHandler);
+    window.addEventListener("touchend", stopHandler);
   };
 
   const renderCenteredItems = (list, selectedIndex, type) => {
@@ -111,9 +193,21 @@ const DatePicker = ({
 
       const isFading = () => {
         if (fadingNumber === "none") {
-          return false;
+          return 100;
+        } else if (fadingNumber === "all") {
+          return `${opacity}%`;
         } else {
-          return true;
+          return 100;
+        }
+      };
+
+      const isCircular = () => {
+        if (circularNumber === false) {
+          return `1rem`;
+        } else if (circularNumber === true) {
+          return `${fontSize}`;
+        } else {
+          return `1rem`;
         }
       };
 
@@ -121,8 +215,8 @@ const DatePicker = ({
         <div
           key={`${type}-${index}-${item}`}
           style={{
-            opacity: `${opacity}%`,
-            fontSize: fontSize,
+            opacity: isFading(),
+            fontSize: isCircular(),
           }} // Use inline styles for dynamic opacity and font size
           className={`py-2 ${
             isSelected ? "font-bold" : ""
@@ -138,13 +232,15 @@ const DatePicker = ({
     <>
       <div className="py-4 bg-white shadow-lg rounded-xl ">
         <div className="flex flex-col items-center justify-center relative">
-          <div className="absolute top-[33.5%] left-0 right-0 h-11 bg-yellow-300 z-[2] opacity-30 " />
+          <div className="absolute top-[35.9%] left-0 right-0 h-11 bg-yellow-300 z-[2] opacity-30 " />
           <div className="flex items-center justify-center space-y-4 relative">
             <div className="flex justify-center space-x-1">
               <div
+                ref={yearRef}
                 className="w-24 text-center cursor-pointer select-none z-[3]"
                 onWheel={(e) => handleInfiniteScroll(e, "year")}
                 onMouseDown={(e) => handleInfiniteDrag(e, "year")}
+                onTouchStart={(e) => handleInfiniteDrag(e, "year")}
               >
                 {renderCenteredItems(
                   years,
@@ -152,20 +248,24 @@ const DatePicker = ({
                   "year"
                 )}
               </div>
-              <div
+              {/* <div
+                ref={monthRef}
                 className="w-24 text-center cursor-pointer select-none z-[3]"
                 onWheel={(e) => handleInfiniteScroll(e, "month")}
                 onMouseDown={(e) => handleInfiniteDrag(e, "month")}
+                onTouchStart={(e) => handleInfiniteDrag(e, "month")}
               >
                 {renderCenteredItems(months, selectedMonth, "month")}
               </div>
               <div
+                ref={dayRef}
                 className="w-24 text-center cursor-pointer select-none z-[3]"
                 onWheel={(e) => handleInfiniteScroll(e, "day")}
                 onMouseDown={(e) => handleInfiniteDrag(e, "day")}
+                onTouchStart={(e) => handleInfiniteDrag(e, "day")}
               >
                 {renderCenteredItems(days, selectedDay - 1, "day")}
-              </div>
+              </div> */}
             </div>
           </div>
           <div className="w-full mt-4 flex justify-center">
