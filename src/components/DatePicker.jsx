@@ -5,6 +5,8 @@ const DatePicker = ({
   lang = "ar",
   selectedDate,
   onDateChange,
+  fadingNumber = "all",
+  circularNumber = false,
   className,
   ...props
 }) => {
@@ -101,7 +103,7 @@ const DatePicker = ({
 
     document.addEventListener("mousemove", handleDragMove);
     document.addEventListener("mouseup", handleDragEnd);
-    document.addEventListener("touchmove", handleDragMove);
+    document.addEventListener("touchmove", handleDragMove, { passive: false });
     document.addEventListener("touchend", handleDragEnd);
   };
 
@@ -111,11 +113,11 @@ const DatePicker = ({
     const currentY = e.clientY || e.touches[0].clientY;
     const delta = currentY - dragState.current.startY;
 
-    if (Math.abs(delta) > 30) {
+    if (Math.abs(delta) > 10) {
       const direction = delta > 0 ? -1 : 1;
       updateValue(dragState.current.type, direction);
 
-      // Reset the drag state to allow continuous scrolling
+      // Reset the drag state to allow continuous updates
       dragState.current.startY = currentY;
     }
   };
@@ -171,10 +173,50 @@ const DatePicker = ({
       const item = list[infiniteIndex];
       const isSelected = index === half;
 
+      let opacity;
+      let fontSize;
+      if (index === 0 || index === 6) {
+        opacity = 40;
+        fontSize = "0.5rem"; // Smallest font size
+      } else if (index === 1 || index === 5) {
+        opacity = 60;
+        fontSize = "0.7rem"; // Medium font size
+      } else if (index === 2 || index === 4) {
+        opacity = 80;
+        fontSize = "0.9rem"; // Larger font size
+      } else if (index === 3) {
+        opacity = 100;
+        fontSize = "1.1rem"; // Largest font size (centered item)
+      }
+
+      const isFading = () => {
+        if (fadingNumber === "none") {
+          return 100;
+        } else if (fadingNumber === "all") {
+          return `${opacity}%`;
+        } else {
+          return 100;
+        }
+      };
+
+      const isCircular = () => {
+        if (circularNumber === false) {
+          return `1rem`;
+        } else if (circularNumber === true) {
+          return `${fontSize}`;
+        } else {
+          return `1rem`;
+        }
+      };
+
       return (
         <div
           key={`${type}-${index}-${item}`}
-          className={`py-2 ${
+          style={{
+            opacity: isFading(),
+            fontSize: isCircular(),
+          }}
+          className={`${circularNumber ? "py-[6px]" : "py-2"} py-2 ${
             isSelected ? "font-bold" : ""
           } text-center transition-all duration-300`}
           onMouseDown={(e) => handleDragStart(e, type)}
@@ -188,11 +230,15 @@ const DatePicker = ({
 
   return (
     <div
-      className={`py-4 bg-white shadow-lg rounded-xl ${className}`}
+      className={`py-4 bg-white shadow-lg rounded-t-3xl ${className}`}
       {...props}
     >
-      <div className="flex flex-col items-center justify-center relative">
-        <div className="absolute top-[35.9%] left-0 right-0 h-11 bg-yellow-300 z-[2] opacity-30" />
+      <div className="flex flex-col relative">
+        <div
+          className={`absolute ${
+            circularNumber ? "top-[31.6%]" : "top-[35.3%]"
+          } left-0 right-0 h-11 bg-[#faf0dc] z-[2] opacity-30`}
+        />
         <div className="flex items-center justify-center space-y-4 relative">
           <div className="flex justify-center space-x-1">
             <div
@@ -220,7 +266,7 @@ const DatePicker = ({
         </div>
         <div className="w-full mt-4 flex justify-center">
           <button
-            className="px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 focus:outline-none"
+            className="px-[45px] py-2 bg-[#FFCF47] text-white font-semibold rounded-3xl hover:bg-yellow-600 focus:outline-none"
             onClick={() =>
               alert(
                 `Selected Date: ${String(selectedDay).padStart(2, "0")} ${
